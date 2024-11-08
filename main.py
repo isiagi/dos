@@ -5,7 +5,7 @@ import psutil
 import time
 
 
-target="192.168.1.4"
+target="127.0.0.1"
 port=80
 trd=10
 fake_ip="127.0.0.1"
